@@ -46,15 +46,6 @@
         .modal { transition: opacity 0.25s ease; }
         .glass-panel { background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); }
 
-        /* Modo claro */
-        body { background-color: #f8fafc; color: #0f172a; }
-        .glass-panel { background: rgba(255, 255, 255, 0.96); }
-        .bg-slate-950, .bg-slate-900 { background-color: #f1f5f9 !important; }
-        .bg-slate-800, .bg-slate-800\/50, .bg-slate-700\/50, .bg-slate-900\/50, .bg-slate-900\/60 { background-color: #ffffff !important; }
-        .border-slate-800, .border-slate-700, .border-slate-600 { border-color: #cbd5e1 !important; }
-        .text-slate-200, .text-slate-300, .text-slate-400, .text-slate-500, .text-slate-600, .text-white { color: #0f172a !important; }
-        input, select, textarea { background-color: #ffffff; border-color: #cbd5e1; color: #0f172a; }
-
     </style>
 </head>
 <body class="min-h-screen flex overflow-hidden text-slate-200">
@@ -513,6 +504,15 @@
                             </div>
                         </form>
 
+                        <div class="flex flex-col md:flex-row gap-3 md:items-center md:justify-between mb-3">
+                            <input
+                                type="text"
+                                id="product-search-code"
+                                placeholder="Buscar por nombre o código..."
+                                class="w-full md:w-80 rounded p-2 text-sm bg-slate-900 border border-slate-600"
+                            >
+                        </div>
+
                         <div class="overflow-x-auto flex-1">
                             <table class="w-full text-sm text-left text-slate-300">
                                 <thead class="text-xs text-slate-500 uppercase bg-slate-900">
@@ -577,6 +577,11 @@
                 showToast('Producto guardado exitosamente');
                 refreshProductConfigUI();
             }); // 👈 CIERRA addEventListener
+
+            const productSearchInput = document.getElementById('product-search-code');
+            if (productSearchInput) {
+                productSearchInput.addEventListener('input', refreshProductConfigUI);
+            }
         } // 👈 CIERRA renderProducts
 
 
@@ -604,7 +609,19 @@
             prodCatSelect.innerHTML = '<option value="">Categoría...</option>' + db.categories.map(c => `<option value="${c}">${c}</option>`).join('');
             prodMeasureSelect.innerHTML = '<option value="">Medida...</option>' + db.measures.map(m => `<option value="${m}">${m}</option>`).join('');
 
-            prodTable.innerHTML = db.products.slice().reverse().map(p => `
+            const productSearchInput = document.getElementById('product-search-code');
+            const searchQuery = normalizeText(productSearchInput?.value?.trim() || '');
+            const filteredProducts = db.products
+                .filter((p) => {
+                    if (!searchQuery) return true;
+                    const name = normalizeText(p.name || '');
+                    const code = normalizeText(p.code || '');
+                    return name.includes(searchQuery) || code.includes(searchQuery);
+                })
+                .slice()
+                .reverse();
+
+            prodTable.innerHTML = filteredProducts.map(p => `
                 <tr class="hover:bg-slate-700/50 transition">
                     <td class="p-3">
                         <div class="font-bold text-white">${p.name}</div>
@@ -1435,7 +1452,7 @@
                         <div class="flex-1 min-w-[200px]">
                             <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Producto</label>
                             <select id="inv-prod" class="w-full bg-slate-900 border border-slate-600 rounded p-2 text-slate-200">
-                                ${db.products.map(p => `<option value="${p.id}">${p.name} (${p.stock})</option>`).join('')}
+                                ${db.products.map(p => `<option value="${p.id}">${p.name} (${p.code || 'SIN CÓDIGO'})</option>`).join('')}
                             </select>
                         </div>
                         <div class="w-32">
